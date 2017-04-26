@@ -1,6 +1,6 @@
 {
   "name": "vide-plugin-prompt-vue",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "author": "vic.wang",
   "scripts": {
     "start": "babel ./src/ -d ./lib/"
@@ -19,6 +19,11 @@
     "url": "git@github.com:debuggap/vide-plugin-prompt-vue.git"
   },
   "main": "lib/index.js",
+  "dependencies": {
+    "vide-plugin-context-css": "*",
+    "vide-plugin-context-js": "*",
+    "vide-plugin-context-html": "*"
+  },
   "devDependencies": {
     "babel-cli": "^6.18.0",
     "babel-core": "^6.21.0",
