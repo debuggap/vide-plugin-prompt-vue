@@ -1,0 +1,28 @@
+{
+  "name": "vide-plugin-prompt-vue",
+  "version": "0.0.1",
+  "author": "vic.wang",
+  "scripts": {
+    "start": "babel ./src/ -d ./lib/"
+  },
+  "vide": {
+    "type": "prompt",
+    "promptExtension": ["vue"],
+    "promptPriority": 1
+  },
+  "keywords": [
+    "vide-plugin",
+    "prompt-vue"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:debuggap/vide-plugin-prompt-vue.git"
+  },
+  "main": "lib/index.js",
+  "devDependencies": {
+    "babel-cli": "^6.18.0",
+    "babel-core": "^6.21.0",
+    "babel-preset-es2015": "^6.18.0",
+    "simple-file-logger": "1.0.1"
+  }
+}
