@@ -1,13 +1,15 @@
 {
   "name": "vide-plugin-prompt-vue",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "author": "vic.wang",
   "scripts": {
     "start": "babel ./src/ -d ./lib/"
   },
   "vide": {
     "type": "prompt",
-    "promptExtension": ["vue"],
+    "promptExtension": [
+      "vue"
+    ],
     "promptPriority": 1
   },
   "keywords": [
@@ -28,6 +30,9 @@
     "babel-cli": "^6.18.0",
     "babel-core": "^6.21.0",
     "babel-preset-es2015": "^6.18.0",
-    "simple-file-logger": "1.0.1"
+    "babel-traverse": "^6.24.1",
+    "babylon": "^6.17.1",
+    "simple-file-logger": "1.0.1",
+    "vue-template-compiler": "^2.3.3"
   }
 }

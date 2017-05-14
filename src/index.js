@@ -5,22 +5,28 @@ import cssPrompt from 'vide-plugin-context-css'
 import htmlPrompt from 'vide-plugin-context-html'
 // const logger = require('simple-file-logger')
 // const _log = logger({
-//   path: './logs',   
+//   path: './',   
 //   filename: 'log'
 // })
-// const log = function (str) { _log(str, null)}
+// const log = function (str) { if (typeof str === 'object') str = JSON.stringify(str); _log(str, null)}
 
 let contexts = {}
 let integratedWords = [] //it's integrated defintegrate
 let integratedMatch = {}
+
 let words = [] //this is created by each vue file
+let wordsMatch = {}
+let currentContext = {} //context of current vue file
 let prevPromptStr = ''
 let prevPromptLists = []
+let vueMapResult = null // vue map result
+// process instance
+let process = null
 
 function loadIntegratedWords () {
-  let i
   let allWords = []
   let context
+  let i
   // add context
   allWords = htmlPrompt.variables
   context = cssPrompt.context
@@ -56,15 +62,13 @@ function loadIntegratedWords () {
 function analyseContent (con) {
   let reg = /([a-zA-Z_\$][a-zA-Z0-9_\$]{3,})/g
   let arr = con.match(reg)
-  words =[]
   if (!arr) {
     return
   }
-  let matchObj = {}
   arr.forEach((item) => {
-    if (!matchObj[item] && !integratedMatch[item]) {
+    if (!wordsMatch[item] && !integratedMatch[item]) {
       words.push(item)
-      matchObj[item] = 1
+      wordsMatch[item] = 1
     }
   })
 }
@@ -100,7 +104,7 @@ function getTypedCharacters (action, store, editor) {
       let splitChar = value.includes(':') ? ':' : '.'
       let arr = value.split(splitChar)
       if (arr.length === 2) {
-        if (contexts[arr[0]]) {
+        if (contexts[arr[0]] || currentContext[arr[0]]) {
           value = {
             context: arr[0],
             value: arr[1]
@@ -127,41 +131,107 @@ function matchWords (str) {
   }
   let results = []
   results = lists.filter((item) => {
-    return reg.test(item)
+    if (item.value) {
+      return reg.test(item.value) 
+    } else {
+      return reg.test(item)
+    }
   })
   if (!results.length) {
     reg = new RegExp(str, 'i')
     results = lists.filter((item) => {
-      return reg.test(item)
+      if (item.value) {
+        return reg.test(item.value) 
+      } else {
+        return reg.test(item)
+      }
     })
   }
-  results.sort(function (a,b){return a.value > b.value ? 1 : -1;})
+  results.sort(function (a,b){
+    a = a.value || a
+    b = b.value || b
+    return a > b? 1 : -1;
+  })
   return results
 }
 
 function matchContext (item) {
-  let lists = contexts[item.context]
+  let lists = contexts[item.context] ? contexts[item.context] : currentContext[item.context]
   if (item.value) {
     let str = item.value
     lists = lists.filter((item) => {
-      return item.includes(str)
+      let v = item.name || item.value || item
+      return v.includes(str)
     })
   }
   return lists
 }
 
-export default ({editor, store, view, packageInfo, baseClass}) => {
+function _receive (data) {
+  if (data) {
+    vueMapResult = data
+    let value
+    let name
+    for (var i in data.funcs) {
+      name = i + '(' + data.funcs[i].params.join(',') + ')'
+      value = i + '()'
+      if (!wordsMatch[name]) {
+        words.push({value, name, params: data.funcs[i].params})
+        wordsMatch[name] = 1
+      }
+    }
+    let methods = []
+    for (var i in data.component.methods) {
+      name = i + '(' + data.component.methods[i].params.join(',') + ')'
+      value = i + '()'
+      methods.push({value, name, params: data.component.methods[i].params})
+    }
+    currentContext = {this: data.component.variables.concat(methods).sort()}
+  } else {
+    vueMapResult = null
+    currentContext = {}
+  }
+  if (process) {
+    process.kill()
+    process = null
+  }
+}
+
+function analyseVue (filepath) {
+  if (process) {
+    process.kill()
+  }
+  process = require('child_process').fork(path.join(__dirname, '..', 'traverse.js'))
+  process.send({filepath})
+  process.on('message', _receive)
+}
+
+export default ({editor, store, view, packageInfo, baseClass, signal}) => {
   // load integrated words
   loadIntegratedWords()
   // subscribe change file
   store.subscribe((mutation, state) => {
-    if (['EDITOR_SET_FILE_TYPE','FILE_CREATE'].includes(mutation.type) && store.state.editor.promptName === 'videPluginPromptVue') {
-      analyseContent(state.editor.content)
+    if (store.state.editor.promptName === 'videPluginPromptVue') {
+      if (['EDITOR_SET_FILE_TYPE','FILE_CREATE'].includes(mutation.type)) {
+        analyseVue(store.state.editor.currentFile)
+        analyseContent(store.state.editor.content)
+      }
     }
   })
+
   editor.session.on('change', function (action) {
-    if (store.state.editor.promptName === 'videPluginPromptVue' && action.action === 'insert' && action.lines.join('') === '') {
+    if (store.state.editor.promptName === 'videPluginPromptVue' && ["insert", "remove"].includes(action.action) && action.lines.join('') === '') {
+      analyseVue(store.state.editor.currentFile)
       analyseContent(editor.getValue())
+    }
+  })
+  
+  signal.receive('saveFile', () => {
+    if (store.state.editor.promptName === 'videPluginPromptVue') {
+      words = []
+      wordsMatch = {}
+      analyseVue(store.state.editor.currentFile)
+      analyseContent(store.state.editor.content)
     }
   })
   // return execute class
