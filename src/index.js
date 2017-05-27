@@ -20,6 +20,7 @@ let currentContext = {} //context of current vue file
 let prevPromptStr = ''
 let prevPromptLists = []
 let vueMapResult = null // vue map result
+let vueInstanceContext = ['$options', '$parent', '$root', '$children', '$refs', '$vnode', '$slots', '$scopedSlots', '$createElement', '$store', '$el', '$set', '$delete', '$watch', '$on', '$once', '$off', '$emit', '$forceUpdate', '$destroy', '$nextTick', '$mount']
 // process instance
 let process = null
 
@@ -186,7 +187,7 @@ function _receive (data) {
       value = i + '()'
       methods.push({value, name, params: data.component.methods[i].params})
     }
-    currentContext = {this: data.component.variables.concat(methods).sort()}
+    currentContext = {this: data.component.variables.concat(methods).concat(vueInstanceContext).sort()}
   } else {
     vueMapResult = null
     currentContext = {}
@@ -256,6 +257,94 @@ export default ({editor, store, view, packageInfo, baseClass, signal}) => {
         prevPromptStr = ''
         prevPromptLists = []
         store.dispatch('editor/cleanPromptLists')
+      }
+    }
+    
+    mappingArea (position) {
+      let result = require('vue-template-compiler').parseComponent(editor.getValue())
+      let len
+      if (position.row === 0) {
+        len = position.column
+      } else {
+        len = editor.session.getLines(0, position.row - 1).join('') + editor.session.getLine(position.row).slice(0, position.column)
+        len = len.length
+      }
+      let type = null
+      if (result.template.start <=len && len <= result.template.end) {
+        type = 'template'
+      } else if (result.script.start <=len && len <= result.script.end) {
+        type = 'script'
+      }
+      return type
+    }
+    
+    mappingTemplate (position) {
+      let line = editor.session.getLine(position.row)
+      let prevFlagment = line.slice(0, position.column)
+      let matches
+      // map result
+      let result = null
+      matches = prevFlagment.match(/<[\w\-\$]+$/)
+      if (matches) {
+        // match vue component
+        let component = line.slice(matches.index + 1).match(/^[\w\-\$]+/)
+        if (component) {
+          component = component[0]
+          if (vueMapResult.defaultSpecifier && vueMapResult.defaultSpecifier[component]) {
+            result = vueMapResult.defaultSpecifier[component]
+            result['value'] = component
+          } else {
+            let _component = component.replace(/-/g, '').toLowerCase()
+            for (let key in vueMapResult.defaultSpecifier) {
+              if (key.toLowerCase() === _component) {
+                result = vueMapResult.defaultSpecifier[key]
+                result['value'] = component
+                break
+              }
+            }
+          }
+        }
+      } else {
+        matches = prevFlagment.match(/(v-on:|@)\S+?\s*=\s*"\s*\S+$/)
+        if (matches) {
+          matches = prevFlagment.match(/[\w\-\$]+$/)
+          let event = line.slice(matches.index).match(/^[\w\-\$]+/)
+          if (event && vueMapResult.component.methods[event[0]]) {
+            result = vueMapResult.component.methods[event[0]]
+            result['value'] = event[0]
+          }
+        }
+      }
+      return result
+    }
+    
+    mappingScript (position) {
+      let line = editor.session.getLine(position.row)
+      let prevFlagment = line.slice(0, position.column)
+      let matches
+      // map result
+      let result = null
+      matches = prevFlagment.match(/[\w\-\$]+$/)
+      if (matches) {
+        let str = line.slice(matches.index)
+        matches = str.match(/^([\w\-\$]+)\(/)
+        if (matches) {
+          let func = matches[1]
+          result = vueMapResult.component.methods[func] || vueMapResult.funcs[func] || null
+          if (result) {
+            result['value'] = func
+          }
+        }
+      }
+      return result
+    }
+    
+    mapping ({position}) {
+      let areaType = this.mappingArea(position)
+      if (areaType === 'template') {
+        return this.mappingTemplate(position)
+      } else if (areaType === 'script') {
+        return this.mappingScript(position)
       }
     }
   }

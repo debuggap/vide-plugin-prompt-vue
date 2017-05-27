@@ -1,6 +1,7 @@
 var babylon = require('babylon')
 var traverse = require('babel-traverse').default
 var fs = require('fs')
+var _path = require('path')
 var parser = require('vue-template-compiler')
 
 process.on('message', function(data) {
@@ -25,6 +26,7 @@ function parse (file) {
   })
   var mapResult = {
     funcs: {},
+    defaultSpecifier: {},
     component: {
       methods: {},
       variables: []
@@ -32,7 +34,20 @@ function parse (file) {
   }
   traverse(result, {
     ImportDeclaration (path) {
-      // 
+      let node = path.node
+      if (!(node.specifiers && node.specifiers.length)) {
+        return
+      }
+      let defaultSpecifier = node.specifiers[0].local.name
+      let source = node.source.value
+      // if source is not relative path,then return
+      if (source[0] !== '.') {
+        return
+      }
+      let realPath = _path.join(_path.dirname(file), source)
+      mapResult.defaultSpecifier[defaultSpecifier] = {
+        path: realPath
+      }
     },
     ExportDefaultDeclaration (path) {
       path.traverse({
@@ -48,6 +63,7 @@ function parse (file) {
                 return param.name ? param.name : param.left.name
               })
               mapResult.component.methods[name] = {
+                path: file,
                 row: property.loc.start.line,
                 params
               }
@@ -106,6 +122,7 @@ function parse (file) {
         })
       } catch (e) {}
       let value = {
+        path: file,
         row: node.id.loc.start.line,
         params
       }
