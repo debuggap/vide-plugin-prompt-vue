@@ -18,8 +18,30 @@ const variables = [
   'template', 'script', 'style', 'scoped', 'lang',
   // vuex
   'commit', 'dispatch', 'replaceState', 'watch', 'subscribe', 'registerModule', 'unregisterModule', 'hotUpdate', 'mapState', 'mapGetters', 'mapActions', 'mapMutations'
-]
+];
+
+const blocks = [
+  {
+    value: 'data () {\n\treturn {\n\t\t\n\t}\n}',
+    moveAction: [-2, 2]
+  }
+];
+
+['computed', 'methods', 'watch'].forEach(function (item) {
+  blocks.push({
+    value: `${item}: {\n\t\n}`,
+    moveAction: [-1, 1]
+  })
+});
+
+['beforeCreate', 'created', 'beforeMount', 'mounted', 'beforeUpdate', 'updated', 'activated', 'deactivated', 'beforeDestroy', 'destroyed'].forEach(function (item) {
+  blocks.push({
+    value: `${item} () {\n\t\n}`,
+    moveAction: [-1, 1]
+  })
+});
 export default {
   context,
-  variables
+  variables,
+  blocks
 }

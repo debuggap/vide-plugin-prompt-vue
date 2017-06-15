@@ -51,11 +51,14 @@ function loadIntegratedWords () {
     allWords = allWords.concat(context[i])
   }
   allWords = allWords.concat(vuePrompt.variables)
+  allWords = allWords.concat(vuePrompt.blocks)
   // add variables
+  let key
   for (i = 0; i < allWords.length; i++) {
-    if (!integratedMatch[allWords[i]]) {
+    key = allWords[i].value || allWords[i]
+    if (!integratedMatch[key]) {
       integratedWords.push(allWords[i])
-      integratedMatch[allWords[i]] = 1
+      integratedMatch[key] = 1
     }
   }
 }
