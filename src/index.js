@@ -51,7 +51,9 @@ function loadIntegratedWords () {
     allWords = allWords.concat(context[i])
   }
   allWords = allWords.concat(vuePrompt.variables)
-  allWords = allWords.concat(vuePrompt.blocks)
+  if (nw.App.manifest.version > '1.0.1') {
+    allWords = allWords.concat(vuePrompt.blocks)
+  }
   // add variables
   let key
   for (i = 0; i < allWords.length; i++) {
