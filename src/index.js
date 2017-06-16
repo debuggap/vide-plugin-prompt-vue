@@ -281,39 +281,58 @@ export default ({editor, store, view, packageInfo, baseClass, signal}) => {
       return type
     }
     
+    /*
+    * mapping word according to position
+    */
+    _mappingWord (line, position, endReg, startReg, callback) {
+      let prevFlagment = line.slice(0, position.column)
+      let matches = prevFlagment.match(endReg)
+      let result = null
+      if (matches) {
+        result = line.slice(matches.index).match(startReg)
+        if (result && callback) {
+          result = callback(result)
+        }
+      }
+      return result
+    }
+    
+    // mapping vue component
+    _mappingComponent (component) {
+      let result = null
+      if (vueMapResult.defaultSpecifier && vueMapResult.defaultSpecifier[component]) {
+        result = vueMapResult.defaultSpecifier[component]
+        result['value'] = component
+      } else {
+        let _component = component.replace(/-/g, '').toLowerCase()
+        for (let key in vueMapResult.defaultSpecifier) {
+          if (key.toLowerCase() === _component) {
+            result = vueMapResult.defaultSpecifier[key]
+            result['value'] = component
+            break
+          }
+        }
+      }
+      return result
+    }
+    
+    // mapping template tag
     mappingTemplate (position) {
       let line = editor.session.getLine(position.row)
-      let prevFlagment = line.slice(0, position.column)
       let matches
       // map result
       let result = null
-      matches = prevFlagment.match(/<[\w\-\$]+$/)
-      if (matches) {
-        // match vue component
-        let component = line.slice(matches.index + 1).match(/^[\w\-\$]+/)
-        if (component) {
-          component = component[0]
-          if (vueMapResult.defaultSpecifier && vueMapResult.defaultSpecifier[component]) {
-            result = vueMapResult.defaultSpecifier[component]
-            result['value'] = component
-          } else {
-            let _component = component.replace(/-/g, '').toLowerCase()
-            for (let key in vueMapResult.defaultSpecifier) {
-              if (key.toLowerCase() === _component) {
-                result = vueMapResult.defaultSpecifier[key]
-                result['value'] = component
-                break
-              }
-            }
-          }
-        }
+      result = this._mappingWord(line, position, /<[\w\-\$]+$/, /^<([\w\-\$]+)/, (result) => result[1])
+      // match vue component
+      if (result) {
+        result = this._mappingComponent(result)
       } else {
+        let prevFlagment = line.slice(0, position.column)
         matches = prevFlagment.match(/(v-on:|@)\S+?\s*=\s*"\s*\S+$/)
         if (matches) {
-          matches = prevFlagment.match(/[\w\-\$]+$/)
-          let event = line.slice(matches.index).match(/^[\w\-\$]+/)
-          if (event && vueMapResult.component.methods[event[0]]) {
-            result = vueMapResult.component.methods[event[0]]
+          let event = this._mappingWord(line, position, /[\w\-\$]+$/, /^[\w\-\$]+/, (result) => result[0])
+          if (event && vueMapResult.component.methods[event]) {
+            result = vueMapResult.component.methods[event]
             result['value'] = event[0]
           }
         }
@@ -321,22 +340,24 @@ export default ({editor, store, view, packageInfo, baseClass, signal}) => {
       return result
     }
     
+    // mapping script tag
     mappingScript (position) {
       let line = editor.session.getLine(position.row)
-      let prevFlagment = line.slice(0, position.column)
-      let matches
       // map result
       let result = null
-      matches = prevFlagment.match(/[\w\-\$]+$/)
-      if (matches) {
-        let str = line.slice(matches.index)
-        matches = str.match(/^([\w\-\$]+)\(/)
-        if (matches) {
-          let func = matches[1]
-          result = vueMapResult.component.methods[func] || vueMapResult.funcs[func] || null
-          if (result) {
-            result['value'] = func
-          }
+      let matchValue
+      matchValue = this._mappingWord(line, position, /[\w\-\$]+$/, /^([\w\-\$]+)\(/, (result) => result[1])
+      // mapping of call function
+      if (matchValue) {
+        result = vueMapResult.component.methods[matchValue] || vueMapResult.funcs[matchValue] || null
+        if (result) {
+          result['value'] = matchValue
+        }
+      } else if (/^import/.test(line)) {
+        // import mapping
+        matchValue = this._mappingWord(line, position, /[\w\-\$]+$/, /^[\w\-\$]+/, (result) => result[0])
+        if (matchValue) {
+          result = this._mappingComponent(matchValue)
         }
       }
       return result
