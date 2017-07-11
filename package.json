@@ -8,7 +8,9 @@
   "vide": {
     "type": "prompt",
     "promptExtension": [
-      "vue"
+      "vue",
+      "wpy",
+      "wx"
     ],
     "promptPriority": 1
   },

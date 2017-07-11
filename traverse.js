@@ -6,7 +6,7 @@ var parser = require('vue-template-compiler')
 
 process.on('message', function(data) {
   try{
-    var rt = parse(data.filepath)
+    var rt = parse(data.filepath, data.extension)
     process.send(rt)
   } catch (e) {
     process.send(null)
@@ -14,7 +14,7 @@ process.on('message', function(data) {
 })
 
 
-function parse (file) {
+function parse (file, extension) {
   var content = fs.readFileSync(file)
   content = content.toString()
   var obj = parser.parseComponent(content)
@@ -46,7 +46,8 @@ function parse (file) {
       }
       let realPath = _path.join(_path.dirname(file), source)
       mapResult.defaultSpecifier[defaultSpecifier] = {
-        path: realPath
+        path: realPath,
+        extension
       }
     },
     ExportDefaultDeclaration (path) {

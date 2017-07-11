@@ -203,23 +203,25 @@ function _receive (data) {
   }
 }
 
-function analyseVue (filepath) {
+function analyseVue (filepath, pkg) {
+  let extension = pkg.vide && pkg.vide.promptExtension || []
   if (process) {
     process.kill()
   }
   process = require('child_process').fork(path.join(__dirname, '..', 'traverse.js'))
-  process.send({filepath})
+  process.send({filepath, extension})
   process.on('message', _receive)
 }
 
-export default ({editor, store, view, packageInfo, baseClass, signal}) => {
+export default ({editor, store, view, packageInfo, baseClass, signal, console}) => {
+  global.console = console
   // load integrated words
   loadIntegratedWords()
   // subscribe change file
   store.subscribe((mutation, state) => {
     if (store.state.editor.promptName === 'videPluginPromptVue') {
       if (['EDITOR_SET_FILE_TYPE','FILE_CREATE'].includes(mutation.type)) {
-        analyseVue(store.state.editor.currentFile)
+        analyseVue(store.state.editor.currentFile, packageInfo.package)
         analyseContent(store.state.editor.content)
       }
     }
@@ -227,7 +229,7 @@ export default ({editor, store, view, packageInfo, baseClass, signal}) => {
 
   editor.session.on('change', function (action) {
     if (store.state.editor.promptName === 'videPluginPromptVue' && ["insert", "remove"].includes(action.action) && action.lines.join('') === '') {
-      analyseVue(store.state.editor.currentFile)
+      analyseVue(store.state.editor.currentFile, packageInfo.package)
       analyseContent(editor.getValue())
     }
   })
@@ -236,7 +238,7 @@ export default ({editor, store, view, packageInfo, baseClass, signal}) => {
     if (store.state.editor.promptName === 'videPluginPromptVue') {
       words = []
       wordsMatch = {}
-      analyseVue(store.state.editor.currentFile)
+      analyseVue(store.state.editor.currentFile, packageInfo.package)
       analyseContent(store.state.editor.content)
     }
   })
@@ -355,7 +357,7 @@ export default ({editor, store, view, packageInfo, baseClass, signal}) => {
         if (result) {
           result['value'] = matchValue
         }
-      } else if (/^import/.test(line)) {
+      } else if (/^\s*import/.test(line)) {
         // import mapping
         matchValue = this._mappingWord(line, position, /[\w\-\$]+$/, /^[\w\-\$]+/, (result) => result[0])
         if (matchValue) {
