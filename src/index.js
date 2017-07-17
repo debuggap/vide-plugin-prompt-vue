@@ -178,7 +178,7 @@ function _receive (data) {
     vueMapResult = data
     let value
     let name
-    for (var i in data.funcs) {
+    for (let i in data.funcs) {
       name = i + '(' + data.funcs[i].params.join(',') + ')'
       value = i + '()'
       if (!wordsMatch[name]) {
@@ -187,12 +187,28 @@ function _receive (data) {
       }
     }
     let methods = []
-    for (var i in data.component.methods) {
+    for (let i in data.component.methods) {
       name = i + '(' + data.component.methods[i].params.join(',') + ')'
       value = i + '()'
       methods.push({value, name, params: data.component.methods[i].params})
     }
-    currentContext = {this: data.component.variables.concat(methods).concat(vueInstanceContext).sort()}
+    // deal with context
+    currentContext = {}
+    for (let i in data.context) {
+      let realPath = data.context[i]
+      let obj = require(realPath)
+      let properties = []
+      if (Object.keys(obj).join('') === 'default') {
+        obj = obj.default
+      }
+      for (let key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          properties.push(key)
+        }
+      }
+      currentContext[i] = properties.sort()
+    }
+    currentContext['this'] = data.component.variables.concat(methods).concat(vueInstanceContext).sort()
   } else {
     vueMapResult = null
     currentContext = {}
@@ -203,13 +219,13 @@ function _receive (data) {
   }
 }
 
-function analyseVue (filepath, pkg) {
+function analyseVue (filepath, pkg, projectPath) {
   let extension = pkg.vide && pkg.vide.promptExtension || []
   if (process) {
     process.kill()
   }
-  process = require('child_process').fork(path.join(__dirname, '..', 'traverse.js'))
-  process.send({filepath, extension})
+  process = require('child_process').fork(path.join(__dirname, 'traverse.js'))
+  process.send({filepath, extension, projectPath})
   process.on('message', _receive)
 }
 
@@ -221,7 +237,7 @@ export default ({editor, store, view, packageInfo, baseClass, signal, console}) 
   store.subscribe((mutation, state) => {
     if (store.state.editor.promptName === 'videPluginPromptVue') {
       if (['EDITOR_SET_FILE_TYPE','FILE_CREATE'].includes(mutation.type)) {
-        analyseVue(store.state.editor.currentFile, packageInfo.package)
+        analyseVue(store.state.editor.currentFile, packageInfo.package, store.state.projectPath)
         analyseContent(store.state.editor.content)
       }
     }
@@ -229,7 +245,7 @@ export default ({editor, store, view, packageInfo, baseClass, signal, console}) 
 
   editor.session.on('change', function (action) {
     if (store.state.editor.promptName === 'videPluginPromptVue' && ["insert", "remove"].includes(action.action) && action.lines.join('') === '') {
-      analyseVue(store.state.editor.currentFile, packageInfo.package)
+      analyseVue(store.state.editor.currentFile, packageInfo.package, store.state.projectPath)
       analyseContent(editor.getValue())
     }
   })
@@ -238,7 +254,7 @@ export default ({editor, store, view, packageInfo, baseClass, signal, console}) 
     if (store.state.editor.promptName === 'videPluginPromptVue') {
       words = []
       wordsMatch = {}
-      analyseVue(store.state.editor.currentFile, packageInfo.package)
+      analyseVue(store.state.editor.currentFile, packageInfo.package, store.state.projectPath)
       analyseContent(store.state.editor.content)
     }
   })
