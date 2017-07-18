@@ -196,7 +196,12 @@ function _receive (data) {
     currentContext = {}
     for (let i in data.context) {
       let realPath = data.context[i]
-      let obj = require(realPath)
+      let obj
+      try {
+        obj = require(realPath)
+      } catch (e) {
+        continue
+      }
       let properties = []
       if (Object.keys(obj).join('') === 'default') {
         obj = obj.default

@@ -13,7 +13,7 @@ process.on('message', function(data) {
     var rt = parse(data.filepath)
     process.send(rt)
   } catch (e) {
-    process.send(e.stack)
+    process.send(null)
   }
 })
 
