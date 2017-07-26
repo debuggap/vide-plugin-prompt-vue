@@ -188,6 +188,9 @@ function parse (file) {
             * so that we can use require to get it's properties in nw env
             */
             mapResult.context[defaultSpecifier] = realPath
+            mapResult.defaultSpecifier[defaultSpecifier] = {
+              path: realPath
+            }
           } else {
             mapResult.defaultSpecifier[defaultSpecifier] = {
               path: realPath

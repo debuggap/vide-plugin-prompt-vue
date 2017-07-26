@@ -383,6 +383,10 @@ export default ({editor, store, view, packageInfo, baseClass, signal, console}) 
         matchValue = this._mappingWord(line, position, /[\w\-\$]+$/, /^[\w\-\$]+/, (result) => result[0])
         if (matchValue) {
           result = this._mappingComponent(matchValue)
+          if (!result) {
+            // if this is not a default component
+            result = vueMapResult.funcs[matchValue] || null
+          }
         }
       }
       return result
