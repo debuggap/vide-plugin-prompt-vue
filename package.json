@@ -1,6 +1,6 @@
 {
   "name": "vide-plugin-prompt-vue",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "author": "vic.wang",
   "scripts": {
     "start": "babel ./src/ -d ./lib/"

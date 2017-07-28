@@ -295,7 +295,7 @@ export default ({editor, store, view, packageInfo, baseClass, signal, console}) 
         len = position.column
       } else {
         len = editor.session.getLines(0, position.row - 1).join('') + editor.session.getLine(position.row).slice(0, position.column)
-        len = len.length
+        len = len.length + position.row
       }
       let type = null
       if (result.template.start <=len && len <= result.template.end) {
