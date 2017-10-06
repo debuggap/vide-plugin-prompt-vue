@@ -1,6 +1,6 @@
 {
   "name": "vide-plugin-prompt-vue",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "author": "vic.wang",
   "scripts": {
     "start": "babel ./src/ -d ./lib/"
@@ -25,7 +25,7 @@
   "main": "lib/index.js",
   "dependencies": {
     "vide-plugin-context-css": "^0.0.1",
-    "vide-plugin-context-js": "^0.0.1",
+    "vide-plugin-context-js": "^0.0.3",
     "vide-plugin-context-html": "^0.0.1",
     "babel-traverse": "^6.24.1",
     "babylon": "^6.17.1",
